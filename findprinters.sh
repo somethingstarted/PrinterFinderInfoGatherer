@@ -27,14 +27,27 @@ printer_test_oids=($(yq eval '.PrinterTest[]' "$config_file"))
 printer_test_threshold=$(yq eval '.PrinterTestThreshold' "$config_file")
 date_filename_offset=$(yq eval '.DateFilenameOffset' "$config_file")
 
-# Get current date and calculate adjusted date based on offset
-current_date=$(date +%Y-%m-%d)
-adjusted_date=$(date -d "$current_date $date_filename_offset days")
+# Invert the sign of date_filename_offset
+date_filename_offset=$(( -date_filename_offset ))
+
+# Determine the base date
+if [ "$debug_date" = true ]; then
+  base_date=$(date -d "01-$debug_MM_YYYY" +%Y-%m-%d)
+else
+  base_date=$(date +%Y-%m-%d)
+fi
+
+# Calculate the adjusted date based on offset
+adjusted_date=$(date -d "$base_date $date_filename_offset days")
 adjusted_month_year=$(date -d "$adjusted_date" +%Y-%m)
 adjusted_month_name=$(date -d "$adjusted_date" +%B_%Y)
 
+
 # Get current month and year for file naming
 output_file="$output_dir/printers_$adjusted_month_year.csv"
+echo ">>>>>                                                 <<<<<<<<<<"
+echo ">>>>> FILE NAME: printers_$adjusted_month_year.csv    <<<<<<<<<<"
+echo ">>>>>                                                 <<<<<<<<<<" 
 
 # Get current month name for log file naming
 log_file="$output_dir/log_$adjusted_month_name.txt"
@@ -112,7 +125,7 @@ scan_ip() {
     echo -ne "$current_ip - polling...\r"
 
     # Ping the IP to check if it's reachable
-    if ! ping -c 1 -W 1 "$current_ip" &>/dev/null; then
+    if ! ping -c 2 -W 2 "$current_ip" &>/dev/null; then
         echo -ne "\033[K"
         echo "$current_ip - ?" | tee -a "$todays_log"
         return

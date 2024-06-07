@@ -2,6 +2,23 @@
 
 timestart=$(date +%s.%N)
 
+# Set the output directory to be the same location as the script, or the current working directory
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+output_directory="$script_dir/printerCounterOUTPUT"
+
+# Define the filename with the requested naming scheme
+filename="totals_$(date +"%Y_%m").csv"
+logfile="$output_directory/todayslog.txt"
+
+# Ensure the output directory exists
+mkdir -p "$output_directory"
+
+# Clear the log file at the start of each run
+: > "$logfile"
+
+# Redirect all output to the logfile
+exec > >(tee -a "$logfile") 2>&1
+
 # Function to sanitize and truncate output
 sanitize_output() {
   local input="$1"
@@ -59,7 +76,9 @@ if [ -z "$recent_printers_csv" ]; then
   exit 1
 fi
 
-echo "Using printers list from $recent_printers_csv"
+relative_path=$(realpath --relative-to="$(pwd)" "$recent_printers_csv")
+echo "Using printers list from $relative_path"
+
 
 # Read the printer IPs from the CSV file (first column, starting from the second row)
 mapfile -t printer_ips < <(tail -n +2 "$recent_printers_csv" | cut -d',' -f1)
@@ -75,24 +94,31 @@ community="public"
 #                                                               #
 # Hardcoded OIDs for total printed pages and serial numbers     #
 oid_pages_bw=(                                                  #
-  "1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2"                     #
-  "1.3.6.1.2.1.43.10.2.1.4.1.1"                                 #
-  "1.3.6.1.4.1.1347.42.3.1.1.1.1.1"                             #
-  "1.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"                           #
-)                                                               #
-oid_pages_color=(                                               #
-  "1.3.6.1.4.1.18334.1.1.1.5.7.2.6.1.4.1"                       #
-)                                                               #
-oid_serial=(                                                    #
-  "1.3.6.1.2.1.43.5.1.1.17.1"                                   #
+  "1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2" # bizhub C368, bizhub C558
+  "1.3.6.1.4.1.1347.43.10.1.1.12.1.1" # ecosys P2135dn  
+  "1.3.6.1.4.1.1347.42.3.1.1.1.1.1" # bizhub 4050?
+  "1.3.6.1.4.1.1347.42.3.1.2.1.1.1.1" # ecosys m6235cidn
+  "1.3.6.1.4.1.1347.42.2.1.1.1.6.1.6" #ECOSYS P3260dn 
+  "1.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"
+  "1.3.6.1.2.1.43.10.2.1.4.1.1" 
+  )
+oid_pages_color=(
+#  "1.3.6.1.4.1.18334.1.1.1.5.7.2.6.1.4.1" 
+  iso.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.2.2  # bizhub C368, bizhub C558
+)
+oid_serial=(
+  "1.3.6.1.2.1.43.5.1.1.17.1" # ecosys P2135dn, 
+                              # P3260dn, m6235cidn,
+                              # bizhub c368,
+                              # bizhub c558  
 )                                                               #
 #                                                               #
 #---------------------------------------------------------------#
 
-
 # Prepare the header for CSV file
 header="IP:"
 type_row="Date,Time"
+model_row="Model"
 for ip in "${printer_ips[@]}"; do
   header="$header,$ip,$ip"
   type_row="$type_row,b/w,color"
@@ -102,19 +128,33 @@ done
 serials_row="Serial"
 counts_row="$(date +"%Y-%m-%d"),$(date +"%H:%M:%S")"
 
+
 for ip in "${printer_ips[@]}"; do
+  # Ping the IP address
+  echo -n "pinging $ip - "
+  if ! ping -c 1 -W 1 "$ip" &> /dev/null; then
+    echo "No response..."
+    serials_row="$serials_row,"
+    counts_row="$counts_row,,"
+    model_row="$model_row,"
+    continue
+  else
+    echo  ""
+  fi
+
   # Get printer model
   model=$(get_printer_model "$ip")
   
   echo ">>>>>>>: $ip: $model"
+  model_row="$model_row,$model, <-- "
+
 
   # Query serial number
   echo -n "  $ip Serial: "
-  #echo "            "
   serial=$(try_snmp_get "$ip" "${oid_serial[@]}")
   serial=$(sanitize_output "$serial")
   echo "$serial"
-  serials_row="$serials_row,$serial"
+  serials_row="$serials_row,$serial, <--"
 
   # Query page counts
   echo -n "  $ip  B/W:  "
@@ -130,25 +170,16 @@ for ip in "${printer_ips[@]}"; do
   counts_row="$counts_row,$count_color"
 done
 
-# Set the output directory to be the same location as the script, or the current working directory
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-output_directory="$script_dir/printerCounterOUTPUT"
-
-# Define the filename with the requested naming scheme
-filename="totals_$(date +"%Y_%m").csv"
-
-# Ensure the output directory exists
-mkdir -p "$output_directory"
-
 # Check if the file already exists
 if [ -f "$output_directory/$filename" ]; then
   echo "Appending today's totals to the existing CSV file..."
   echo "$counts_row" >> "$output_directory/$filename"
 else
-  echo "Creating a new CSV file with header and type row..."
+  echo "Creating a new CSV file with header, model row, and type row..."
   {
-    echo ",$header"
-    echo ",$serials_row"
+    echo "$(date +"%b %Y"),$header"
+    echo ,"$model_row"
+    echo ,"$serials_row"
     echo "$type_row"
     echo "$counts_row"
   } > "$output_directory/$filename"
