@@ -49,6 +49,44 @@ try_snmp_get() {
   return 1
 }
 
+# Function to get printer counts
+get_printer_counts() {
+    local ip=$1
+    local model=$2
+
+    local bw_oids=(${OIDS_bw[$model]:-$default_oid})
+    local color_oids=(${OIDS_color[$model]:-$default_oid})
+
+    local bw_count=""
+    local color_count=""
+
+    # Try all B/W OIDs until a successful response
+    for oid in "${bw_oids[@]}"; do
+        bw_count=$(snmpget -v1 -c public "$ip" "$oid" 2>/dev/null | awk '{print $NF}')
+        if [ -n "$bw_count" ]; then
+            break
+        fi
+    done
+
+    # Try all Color OIDs until a successful response
+    for oid in "${color_oids[@]}"; do
+        color_count=$(snmpget -v1 -c public "$ip" "$oid" 2>/dev/null | awk '{print $NF}')
+        if [ -n "$color_count" ]; then
+            break
+        fi
+    done
+
+    # If counts are still empty, use the default OID
+    if [ -z "$bw_count" ]; then
+        bw_count=$(snmpget -v1 -c public "$ip" "$default_oid" | awk '{print $NF}')
+    fi
+    if [ -z "$color_count" ]; then
+        color_count=$(snmpget -v1 -c public "$ip" "$default_oid" | awk '{print $NF}')
+    fi
+
+    echo "$bw_count,$color_count"
+}
+
 # Check if SNMP is installed
 echo "Checking if SNMP is installed..."
 if ! command -v snmpget &> /dev/null; then
@@ -79,7 +117,6 @@ fi
 relative_path=$(realpath --relative-to="$(pwd)" "$recent_printers_csv")
 echo "Using printers list from $relative_path"
 
-
 # Read the printer IPs from the CSV file (first column, starting from the second row)
 mapfile -t printer_ips < <(tail -n +2 "$recent_printers_csv" | cut -d',' -f1)
 
@@ -92,28 +129,39 @@ community="public"
 #                                                               #
 #---------------------------------------------------------------#
 #                                                               #
-# Hardcoded OIDs for total printed pages and serial numbers     #
-oid_pages_bw=(                                                  #
-  #"1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2" # bizhub C368, bizhub C558
- # "1.3.6.1.4.1.1347.43.10.1.1.12.1.1" # ecosys P2135dn  
- # "1.3.6.1.4.1.1347.42.3.1.1.1.1.1" # bizhub 4050?
-  #"1.3.6.1.4.1.1347.42.3.1.2.1.1.1.1" # ecosys m6235cidn
-  #"1.3.6.1.4.1.1347.42.2.1.1.1.6.1.6" #ECOSYS P3260dn 
-  "1.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"
-  "1.3.6.1.2.1.43.10.2.1.4.1.1" 
-  )
-oid_pages_color=(
-#  "1.3.6.1.4.1.18334.1.1.1.5.7.2.6.1.4.1" 
-  iso.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.2.2  # bizhub C368, bizhub C558
-)
+# Get the current year and month
+year=$(date +%Y)
+month=$(date +%m)
+
+# Construct the filename
+csv_file="foundprinters/printers_${year}-${month}.csv"
+
+# Define OIDs for each printer model
+declare -A OIDS_bw
+OIDS_bw["HP"]="null"
+OIDS_bw["Integrated"]="1.3.6.1.4.1.12345.1.1"
+OIDS_bw["KONICA"]="1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2 1.3.6.1.4.1.1347.42.3.1.1.1.1.1"
+OIDS_bw["KYOCERA"]="1.3.6.1.4.1.1347.43.10.1.1.12.1.1 1.3.6.1.4.1.1347.42.3.1.2.1.1.1.1 1.3.6.1.4.1.1347.42.2.1.1.1.6.1.6"
+OIDS_bw["Source"]="null"
+OIDS_bw["Canon"]="1.3.6.1.4.1.789.2.1"
+
+declare -A OIDS_color
+OIDS_color["HP"]="1.3.6.1.2.1.43.10.2.1.5.1.1"
+OIDS_color["Integrated"]="1.3.6.1.4.1.12345.1.2"
+OIDS_color["KONICA"]="1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.2.2"
+OIDS_color["KYOCERA"]="1.3.6.1.4.1.1347.43.10.1.1.13.1.1"
+OIDS_color["Source"]="null"
+OIDS_color["Canon"]="1.3.6.1.4.1.789.2.2"
+
 oid_serial=(
   "1.3.6.1.2.1.43.5.1.1.17.1" # ecosys P2135dn, 
                               # P3260dn, m6235cidn,
                               # bizhub c368,
                               # bizhub c558  
-)                                                               #
-#                                                               #
-#---------------------------------------------------------------#
+) 
+
+# Default OID
+default_oid="1.3.6.1.2.1.43.10.2.1.4.1.1"
 
 # Prepare the header for CSV file
 header="IP:"
@@ -127,7 +175,6 @@ done
 # Prepare the row for serial numbers and page counts
 serials_row="Serial"
 counts_row="$(date +"%Y-%m-%d"),$(date +"%H:%M:%S")"
-
 
 for ip in "${printer_ips[@]}"; do
   # Ping the IP address
@@ -146,8 +193,7 @@ for ip in "${printer_ips[@]}"; do
   model=$(get_printer_model "$ip")
   
   echo ">>>>>>>: $ip: $model"
-  model_row="$model_row,$model, <-- "
-
+  model_row="$model_row,$model,"
 
   # Query serial number
   echo -n "  $ip Serial: "
@@ -156,18 +202,13 @@ for ip in "${printer_ips[@]}"; do
   echo "$serial"
   serials_row="$serials_row,$serial, <--"
 
-  # Query page counts
-  echo -n "  $ip  B/W:  "
-  count_bw=$(try_snmp_get "$ip" "${oid_pages_bw[@]}")
-  count_bw=$(sanitize_output "$count_bw")
-  echo "$count_bw"
-  counts_row="$counts_row,$count_bw"
+  # Get printer counts
+  counts=$(get_printer_counts "$ip" "$model")
+  count_bw=$(echo "$counts" | cut -d',' -f1)
+  count_color=$(echo "$counts" | cut -d',' -f2)
 
-  echo -n "  $ip Color:  "
-  count_color=$(try_snmp_get "$ip" "${oid_pages_color[@]}")
-  count_color=$(sanitize_output "$count_color")
-  echo "$count_color"
-  counts_row="$counts_row,$count_color"
+  # Append counts to counts row
+  counts_row="$counts_row,$count_bw,$count_color"
 done
 
 # Check if the file already exists
@@ -178,8 +219,8 @@ else
   echo "Creating a new CSV file with header, model row, and type row..."
   {
     echo "$(date +"%b %Y"),$header"
-    echo ,"$model_row"
-    echo ,"$serials_row"
+    echo "$model_row"
+    echo "$serials_row"
     echo "$type_row"
     echo "$counts_row"
   } > "$output_directory/$filename"
@@ -188,7 +229,7 @@ fi
 echo "Totals appended to or written to $filename"
 
 # Export the variables so they are available to the timecalc script
-timeend=$(date +%s.%N) #get now's time
+timeend=$(date +%s.%N) # get now's time
 export timestart
 export timeend
 echo "all done"

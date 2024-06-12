@@ -14,9 +14,8 @@ subnets: #for findpriners.sh - subnets to search for priners in. will be used if
   - 10.2.2.0/24
   - 10.2.3.0/24
 knownprinters: #typically for testing. wont be used if debug is off.  
-  - 10.1.2.144
-  - 10.1.2.145
   - 10.1.2.5
+  - 10.25.5.64
   - 10.25.5.54
   - 10.25.20.12
   - 10.25.5.254

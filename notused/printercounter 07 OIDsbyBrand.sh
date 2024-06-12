@@ -92,50 +92,89 @@ community="public"
 #                                                               #
 #---------------------------------------------------------------#
 #                                                               #
-#!/bin/bash
+# Get the current year and month
+year=$(date +%Y)
+month=$(date +%m)
+
+# Construct the filename
+csv_file="foundprinters/printers_${year}-${month}.csv"
 
 # Define OIDs for each printer model
-declare -A OIDS
-OIDS["HP_BW"]="1.3.6.1.2.1.43.10.2.1.4.1.1"
-OIDS["HP_COLOR"]="1.3.6.1.2.1.43.10.2.1.5.1.1"
-OIDS["Integrated_BW"]="1.3.6.1.4.1.12345.1.1"
-OIDS["Integrated_COLOR"]="1.3.6.1.4.1.12345.1.2"
-OIDS["KONICA_BW"]="1.3.6.1.4.1.789.1.1"
-OIDS["KONICA_COLOR"]="1.3.6.1.4.1.789.1.2"
-OIDS["KYOCERA_BW"]="1.3.6.1.4.1.123.1.1"
-OIDS["KYOCERA_COLOR"]="1.3.6.1.4.1.123.1.2"
-OIDS["Source_BW"]="1.3.6.1.4.1.456.1.1"
-OIDS["Source_COLOR"]="1.3.6.1.4.1.456.1.2"
-OIDS["Canon_BW"]="1.3.6.1.4.1.789.2.1"
-OIDS["Canon_COLOR"]="1.3.6.1.4.1.789.2.2"
+declare -A OIDS_bw
+OIDS_bw["HP"]="null"
+OIDS_bw["Integrated"]="1.3.6.1.4.1.12345.1.1"
+OIDS_bw["KONICA"]="1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2 
+                  1.3.6.1.4.1.1347.42.3.1.1.1.1.1"
+OIDS_bw["KYOCERA"]="1.3.6.1.4.1.1347.43.10.1.1.12.1.1 
+                  1.3.6.1.4.1.1347.42.3.1.2.1.1.1.1 
+                  1.3.6.1.4.1.1347.42.2.1.1.1.6.1.6"
+OIDS_bw["Source"]="null"
+OIDS_bw["Canon"]="1.3.6.1.4.1.789.2.1"
+
+declare -A OIDS_color
+OIDS_color["HP"]="1.3.6.1.2.1.43.10.2.1.5.1.1"
+OIDS_color["Integrated"]="1.3.6.1.4.1.12345.1.2"
+OIDS_color["KONICA"]="1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.2.2"
+OIDS_color["KYOCERA"]="1.3.6.1.4.1.1347.43.10.1.1.13.1.1"
+OIDS_color["Source"]="null"
+OIDS_color["Canon"]="1.3.6.1.4.1.789.2.2"
+
+# Default OID
+default_oid="1.3.6.1.2.1.43.10.2.1.4.1.1"
 
 # Function to get printer counts
 get_printer_counts() {
     local ip=$1
     local model=$2
 
-    local bw_oid=${OIDS[${model}_BW]}
-    local color_oid=${OIDS[${model}_COLOR]}
+    local bw_oids=(${OIDS_bw[$model]:-$default_oid})
+    local color_oids=(${OIDS_color[$model]:-$default_oid})
 
-    if [ -n "$bw_oid" ] && [ -n "$color_oid" ]; then
-        bw_count=$(snmpget -v1 -c public "$ip" "$bw_oid" | awk '{print $NF}')
-        color_count=$(snmpget -v1 -c public "$ip" "$color_oid" | awk '{print $NF}')
-        
-        echo "IP: $ip, Model: $model, B/W Count: $bw_count, Color Count: $color_count"
-    else
-        echo "No OID found for model $model"
+    local bw_count=""
+    local color_count=""
+
+    # Try all B/W OIDs until a successful response
+    for oid in "${OIDS_bw[@]}"; do
+        bw_count=$(snmpget -v1 -c public "$ip" "$oid" 2>/dev/null | awk '{print $NF}')
+        if [ -n "$bw_count" ]; then
+            break
+        fi
+    done
+
+    # Try all Color OIDs until a successful response
+    for oid in "${OIDS_color[@]}"; do
+        color_count=$(snmpget -v1 -c public "$ip" "$oid" 2>/dev/null | awk '{print $NF}')
+        if [ -n "$color_count" ]; then
+            break
+        fi
+    done
+
+    # If counts are still empty, use the default OID
+    if [ -z "$bw_count" ]; then
+        bw_count=$(snmpget -v1 -c public "$ip" "$default_oid" | awk '{print $NF}')
     fi
+    if [ -z "$color_count" ]; then
+        color_count=$(snmpget -v1 -c public "$ip" "$default_oid" | awk '{print $NF}')
+    fi
+
+    echo "IP: $ip, Model: $model, B/W Count: $bw_count, Color Count: $color_count"
 }
 
+# Check if the CSV file exists
+if [[ ! -f "$csv_file" ]]; then
+    echo "CSV file not found: $csv_file"
+    exit 1
+fi
+
 # Read CSV and process each line
-while IFS=, read -r ip model; do
+while IFS=, read -r ip model _; do
     # Skip header
     if [[ "$ip" == "IP" ]]; then
         continue
     fi
 
     get_printer_counts "$ip" "$model" | tee -a printer_audit.log
-done < printers.csv                                             #
+done < "$csv_file"
 #                                                               #
 #---------------------------------------------------------------#
 

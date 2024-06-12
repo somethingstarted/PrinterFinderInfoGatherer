@@ -40,6 +40,11 @@ sudo apt install bc -y
 sudo apt install exa -y
 alias ls=exa
 
+sudo apt install caffeine -y
+
+sudo apt install htop -y
+
+sudo apt install gnome-tweaks -y
 
 # Check if SNMP is installed
 echo "Checking if SNMP is installed..."
