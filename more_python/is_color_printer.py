@@ -25,17 +25,25 @@ def is_color_printer(ip, model):
         'yellow': '1.3.6.1.2.1.43.11.1.1.9.1.4'
     }
 
-    is_color_printer_dict = {
+    # 1 = color, 0 = B/W
+    is_color_printer_dict = { 
         'ECOSYS M3860idn': '0',
         'ECOSYS P3260dn': '0',
         'ECOSYS M6235cidn': '1',
+        'ECOSYS P3155dn': '0',
+        'ECOSYS P3145dn': '0',
+        'ECOSYS PA4500x': '0',
+        'ECOSYS P2135dn': '0',
+        'ECOSYS P2235dw': '0',
+        'ECOSYS M3655idn': '0',
         'Dell B2360dn': '0',
-        'KONICA MINOLTA bizhub 360i': '1',
+        'KONICA MINOLTA bizhub 360i': '0',
         'KONICA MINOLTA bizhub C558': '1',
         'HP LaserJet MFP M130nw': '0',
         'HP Color LaserJet Pro M454dn': '1',
         'Source Technologies ST9820': '0',
     }
+#to do: if printer model isn't found on here, it needs to add the printer and it's I.P to the a new LOG for investiation
 
     # If model is recognized in the dictionary, use it to determine if it's a color printer
     if model in is_color_printer_dict:
