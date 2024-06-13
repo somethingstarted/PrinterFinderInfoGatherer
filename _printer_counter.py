@@ -44,6 +44,7 @@ def sanitize_output(input_str):
 def get_printer_model(ip):
     model_oid = "1.3.6.1.2.1.25.3.2.1.3.1"  # Example OID for printer model; update this to the correct OID
     model = snmp_get(ip, model_oid)
+#    model = model
     return model if model is not None else ""
 
 def snmp_get(ip, oid):
@@ -66,23 +67,31 @@ def snmp_get(ip, oid):
 def get_printer_counts(ip, model):
     is_color = is_color_printer(ip, model)  # Ensure model is passed
 
-    bw_oids = get_matching_oids(OIDS_bw, model, default_oid)
+    bw_oids = get_matching_oids(OIDS_bw_known, OIDS_bw, model, default_oid)
     bw_count = try_snmp_get(ip, bw_oids)
     print(f" {ip}    bw_count: {bw_count}")
 
     color_count = ""
     if is_color:
-        color_oids = get_matching_oids(OIDS_color, model, default_oid)
+        color_oids = get_matching_oids(OIDS_color_known, OIDS_color, model, default_oid)
         color_count = try_snmp_get(ip, color_oids)
         print(f" {ip} color_count: {color_count}")
 
     return bw_count if bw_count is not None else "", color_count if color_count is not None else ""
 
 
-def get_matching_oids(oid_dict, model, default):
+def get_matching_oids(known_oid_dict, oid_dict, model, default):
     # Normalize the model string by converting to lowercase and removing spaces
     normalized_model = model.lower().replace(" ", "")
     
+    # First, try to find the model in the known OID dictionary
+    for key in known_oid_dict:
+        normalized_key = key.lower().replace(" ", "")
+        if normalized_key == normalized_model:
+            # Return the list of OIDs, excluding any "null" entries
+            return [oid for oid in known_oid_dict[key] if oid != "null"]
+
+    # If no match is found in the known OID dictionary, proceed to the secondary list
     for keys in oid_dict:
         # Split keys by comma and iterate over each possible match
         for key in keys.split(','):
@@ -135,11 +144,25 @@ else:
     else:
         print(f"ln120: can't open ({foundPrintersCSV}) in {foundprinters_dir}")
         exit(1)
+# known OIDs fr bw and color
+OIDS_bw_known = {
+    "KONICA MINOLTA bizhub C368": ["1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2"],
+    "ECOSYS M3860idn": ["iso.3.6.1.4.1.1347.42.3.1.1.1.1.1"],
+    "ECOSYS M5526cdw": ["iso.3.6.1.4.1.1347.42.3.1.2.1.1.1.1"],
+    "ECOSYS M6235cidn": ["iso.3.6.1.4.1.1347.42.3.1.2.1.1.1.1"],
+    "ECOSYS P6235cdn": ["iso.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"],
+    "ECOSYS M3655idn": ["iso.3.6.1.4.1.1347.42.3.1.1.1.1.1"],
+    "ECOSYS P6230cdn": ["iso.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"]
+}
 
-#---------------------------------------------------------------#
-#       TODO: put in YAML. They must be hardcoded.              #
-#---------------------------------------------------------------#
+OIDS_color_known = {
+    "KONICA MINOLTA bizhub C368": ["1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.2.2"],
+    "ECOSYS M5526cdw": ["iso.3.6.1.4.1.1347.42.3.1.2.1.1.1.2"],
+    "ECOSYS P6235cdn": ["iso.3.6.1.4.1.1347.42.2.2.1.1.3.1.2"],
+    "ECOSYS P6230cdn": ["iso.3.6.1.4.1.1347.42.2.2.1.1.3.1.2"]
+}
 
+# guesses to fall back on 
 OIDS_bw = {
     "HP": ["null"],
     "Integrated": ["1.3.6.1.4.1.12345.1.1"],
