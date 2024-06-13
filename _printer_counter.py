@@ -68,12 +68,13 @@ def get_printer_counts(ip, model):
 
     bw_oids = get_matching_oids(OIDS_bw, model, default_oid)
     bw_count = try_snmp_get(ip, bw_oids)
-    print(f" {ip} bw_count: {bw_count")
+    print(f" {ip}    bw_count: {bw_count}")
 
     color_count = ""
     if is_color:
         color_oids = get_matching_oids(OIDS_color, model, default_oid)
         color_count = try_snmp_get(ip, color_oids)
+        print(f" {ip} color_count: {color_count}")
 
     return bw_count if bw_count is not None else "", color_count if color_count is not None else ""
 
@@ -98,6 +99,8 @@ def get_matching_oids(oid_dict, model, default):
 def try_snmp_get(ip, oids):
     for oid in oids:
         response = snmp_get(ip, oid)
+        if response == "No Such Object currently exists at this OID":
+            response = None
         if response:
             return response
     return None

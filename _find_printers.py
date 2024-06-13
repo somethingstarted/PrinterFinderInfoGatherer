@@ -4,6 +4,9 @@ import yaml
 from datetime import datetime, timedelta
 from pysnmp.hlapi import *
 
+# Import is_printer function from the new script
+from more_python.findPrintersFilter import is_printer
+
 # Define OIDs for different printer data
 SERIAL_OIDS = [
     ".1.3.6.1.2.1.43.5.1.1.17.1",  # General printer serial number OID
@@ -23,8 +26,6 @@ config_file = os.path.join(script_dir, 'settings.yaml')
 output_dir = os.path.join(script_dir, 'foundprinters')
 os.makedirs(output_dir, exist_ok=True)
 
-
-
 # Load configuration from the YAML file
 with open(config_file, 'r') as file:
     config = yaml.safe_load(file)
@@ -32,8 +33,6 @@ with open(config_file, 'r') as file:
 debug_mode = config['debug']
 subnets = config['subnets']
 known_printers = config['knownprinters']
-printer_test_oids = config['PrinterTest']
-printer_test_threshold = config['PrinterTestThreshold']
 date_filename_offset = -config['DateFilenameOffset']
 
 # Determine the base date
@@ -48,9 +47,9 @@ adjusted_month_year = adjusted_date.strftime("%Y-%m")
 
 # Get current month and year for file naming
 output_file = os.path.join(output_dir, f"printers_{adjusted_month_year}.csv")
-print(f">>>>>                                                 <<<<<<<<<<")
-print(f">>>>> FILE NAME: printers_{adjusted_month_year}.csv    <<<<<<<<<<")
-print(f">>>>>                                                 <<<<<<<<<<" )
+print(">>>>>")
+print(f">>>>>        FILE NAME: printers_{adjusted_month_year}.csv")
+print(">>>>>")
 
 # Get current month name for log file naming
 log_file = os.path.join(output_dir, f"log_{adjusted_month_year}.txt")
@@ -120,7 +119,11 @@ def get_printer_data(ip):
             hostname = str(varBind[1])
 
    
-    max_length = 49
+    serial = serial.replace(",", " ")
+    model = model.replace(",", " ")
+    hostname = hostname.replace(",", " ")
+
+    max_length = 40
     return serial, model[:max_length], hostname
 
 # Function to check if a printer is already in the CSV file
@@ -128,48 +131,33 @@ def is_printer_in_csv(ip):
     with open(output_file, 'r') as file:
         return any(line.startswith(f"{ip},") for line in file)
 
-# Function to test if an IP is a printer based on multiple OIDs
-def is_printer(ip):
-    response_count = 0
-
-    for oid in printer_test_oids:
-        errorIndication, errorStatus, errorIndex, varBinds = next(
-            getCmd(SnmpEngine(),
-                   CommunityData('public', mpModel=0),
-                   UdpTransportTarget((ip, 161)),
-                   ContextData(),
-                   ObjectType(ObjectIdentity(oid)))
-        )
-
-        if not errorIndication and not errorStatus:
-            for varBind in varBinds:
-                if str(varBind[1]):
-                    response_count += 1
-
-    total_oids = len(printer_test_oids)
-    required_responses = total_oids * printer_test_threshold // 100
-
-    return response_count >= required_responses
-
 # Function to scan an IP address and update the CSV content
 def scan_ip(current_ip):
-    print(f"{current_ip} - polling...", end="\r")
 
-    response = subprocess.run(['ping', '-c', '2', '-W', '2', current_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(f"{current_ip} - polling...", end="")
+        # Skip if IP is x.x.x.1 or x.x.x.255
+    if current_ip.endswith('.1') or current_ip.endswith('.255'):
+        print(f"\033[K", end="\r")
+        print(f"{current_ip} - skipped", end="\n")
+        return
+    response = subprocess.run(['ping', '-c', '1', '-W', '1', current_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if response.returncode != 0:
-        print(f"\033[K{current_ip} - ?", end="\r")
+        print(f"\033[K", end="\r")
+        print(f"{current_ip} - ?")
         with open(todays_log, 'a') as tlog:
             tlog.write(f"{current_ip} - ?\n")
         return
 
     serial, model, hostname = get_printer_data(current_ip)
-
-    print(f"\033[K{current_ip} - {model} - {serial} - {hostname}", end="\r")
+    #print('', end='')
+    print(f"{current_ip},{model},{serial},{hostname}", end="\n")
 
     if is_printer(current_ip):
+        
         with open(todays_log, 'a') as tlog:
             if not serial:
-                tlog.write(f"{current_ip} - ?\n")
+                tlog.write(f"{current_ip} - no serial - ?\n")
+                print(f"{current_ip}")
             else:
                 tlog.write(f"{current_ip} - {model} - {serial} - {hostname}\n")
 
