@@ -3,3 +3,6 @@ foundprinters
 allprinters
 notused
 .notused
+allprinters/*
+!allprinters/allprinters/_snmpWalkBASH_ip.sh
+!allprinters/allprinters/_snmpWalkIP.py
