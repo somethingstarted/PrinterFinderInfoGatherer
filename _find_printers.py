@@ -153,11 +153,10 @@ def scan_ip(current_ip):
     print(f"{current_ip},{model},{serial},{hostname}", end="\n")
 
     if is_printer(current_ip):
-        print(f"{current_ip} is printer")
+        print(f"{current_ip} is printer.\n")
         with open(todays_log, 'a') as tlog:
             if not serial:
                 tlog.write(f"{current_ip} - no serial - ?\n")
-                print(f"{current_ip}")
             else:
                 tlog.write(f"{current_ip} - {model} - {serial} - {hostname}\n")
 
@@ -165,6 +164,7 @@ def scan_ip(current_ip):
             with open(output_file, 'a') as file:
                 file.write(f"{current_ip},{model},{serial},{hostname}\n")
     else:
+        print(f"{current_ip} not a printer.\n")
         with open(todays_log, 'a') as tlog:
             tlog.write(f"{current_ip} - {model} - {serial} - {hostname} - not a printer\n")
 
