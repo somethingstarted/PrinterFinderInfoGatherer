@@ -14,7 +14,8 @@ subnets: #for findpriners.sh - subnets to search for priners in. will be used if
   - 10.2.2.0/24
   - 10.2.3.0/24
 knownprinters: #typically for testing. wont be used if debug is off.  
-  - 10.1.2.5
+  - 10.25.5.2
+  - 10.25.5.51
   - 10.25.5.64
   - 10.25.5.54
   - 10.25.20.12
@@ -24,14 +25,9 @@ knownprinters: #typically for testing. wont be used if debug is off.
   - 10.25.5.20
   - 10.25.5.21
   - 10.25.5.25
-CPI_Printer_brands:
-  - Epson
-  - Konica Minolta
-  - Ecosys
-locations:
-  - "10.25=Brenham"
-  - "10.1=SulpherSprings"
-multithreading: true #not possible right now
+  - 10.25.20.88
+  - 10.25.20.95
+multithreading: true #not integrated yet
 max_threads: 8 
 PrinterTest: #not for the csv - what to test to see if it's a printer 
 #  - .1.3.6.1.2.1.43.11.1.1.9.1  # Toner C
