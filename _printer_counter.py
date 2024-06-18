@@ -10,6 +10,7 @@ import yaml
 script_dir = os.path.dirname(os.path.realpath(__file__))
 config_file = os.path.join(script_dir, 'settings.yaml')
 
+
 # Get the start time
 timestart = datetime.now()
 
@@ -22,8 +23,10 @@ output_directory = os.path.join(script_dir, "printerCounterOUTPUT")
 with open(config_file, 'r') as file:
     config = yaml.safe_load(file)
 
+# Load config from YAML
 debug = config.get('debug', False)
 known_printers = config.get('knownprinters', [])
+snmp_community = config.get('snmp_community', 'public')
 
 # Define the filename with the requested naming scheme
 filename = f"totals_{datetime.now():%Y_%m}.csv"
@@ -50,6 +53,7 @@ def get_printer_model(ip):
 def snmp_get(ip, oid):
     errorIndication, errorStatus, errorIndex, varBinds = next(
         snmp.getCmd(snmp.SnmpEngine(),
+#                    snmp.CommunityData(snmp_community),
                     snmp.CommunityData('public'),
                     snmp.UdpTransportTarget((ip, 161)),
                     snmp.ContextData(),
@@ -152,7 +156,8 @@ OIDS_bw_known = {
     "ECOSYS M6235cidn": ["iso.3.6.1.4.1.1347.42.3.1.2.1.1.1.1"],
     "ECOSYS P6235cdn": ["iso.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"],
     "ECOSYS M3655idn": ["iso.3.6.1.4.1.1347.42.3.1.1.1.1.1"],
-    "ECOSYS P6230cdn": ["iso.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"]
+    "ECOSYS P6230cdn": ["iso.3.6.1.4.1.1347.42.2.2.1.1.3.1.1"],
+    "Source Technologies ST9820": ["iso.3.6.1.4.1.641.6.4.2.1.1.4.1.2"]
 }
 
 OIDS_color_known = {

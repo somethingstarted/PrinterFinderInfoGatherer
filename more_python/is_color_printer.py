@@ -43,6 +43,7 @@ def is_color_printer(ip, model):
         'HP Color LaserJet Pro M454dn': '1',
         'Source Technologies ST9820': '0',
         'KONICA MINOLTA bizhub 450i': '0',
+        'Source Technologies ST9820': '0',
     }
 #to do: if printer model isn't found on here, it needs to add the printer and it's I.P to the a new LOG for investiation
 
