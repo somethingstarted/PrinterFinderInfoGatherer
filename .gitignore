@@ -1,6 +1,8 @@
 printerCounterOUTPUT
 foundprinters
-settings.yaml
+src/foundprinters
+src/settings.yaml
+output
 allprinters
 notused
 .notused

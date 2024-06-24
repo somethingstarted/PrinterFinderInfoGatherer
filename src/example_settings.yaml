@@ -1,5 +1,6 @@
 #     rename this to "settings.yaml" and fill in the values
 debug: false
+snmpv1_community: public
 SuppressSnmpErrors: true #keep true. 
 debug_date: false
 debug_MM_YYYY: 9-2001 

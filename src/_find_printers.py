@@ -22,9 +22,13 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 # Assuming the YAML file is in the same directory as the script
 config_file = os.path.join(script_dir, 'settings.yaml')
 
-# Output directory
-output_dir = os.path.join(script_dir, 'foundprinters')
+# Output directories
+output_dir = os.path.normpath(os.path.join(script_dir, '../output'))
+logs_dir = os.path.join(output_dir, 'logs')
+
+# Ensure the directories exist
 os.makedirs(output_dir, exist_ok=True)
+os.makedirs(logs_dir, exist_ok=True)
 
 # Load configuration from the YAML file
 with open(config_file, 'r') as file:
@@ -46,20 +50,22 @@ adjusted_date = base_date + timedelta(days=date_filename_offset)
 adjusted_month_year = adjusted_date.strftime("%Y-%m")
 
 # Get current month and year for file naming
-output_file = os.path.join(output_dir, f"printers_{adjusted_month_year}.csv")
+short_name = f"foundprinters_{adjusted_month_year}.csv"
+output_file = os.path.join(output_dir, short_name)
 print(">>>>>")
-print(f">>>>>        FILE NAME: printers_{adjusted_month_year}.csv")
+print(f">>>>>        FILE NAME: {short_name}")
 print(">>>>>")
 
 # Get current month name for log file naming
-log_file = os.path.join(output_dir, f"log_{adjusted_month_year}.txt")
+log_file = os.path.join(logs_dir, f"log_{adjusted_month_year}.txt")
 
 # Today's log file
-todays_log = os.path.join(output_dir, "TodaysLog.txt")
+todays_log = os.path.join(logs_dir, "TodaysLog_FindPrinters.txt")
 
 # Clear today's log file
 with open(todays_log, 'w'):
     pass
+
 
 # Log the start of the script
 with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:

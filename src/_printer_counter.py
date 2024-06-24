@@ -10,14 +10,18 @@ import yaml
 script_dir = os.path.dirname(os.path.realpath(__file__))
 config_file = os.path.join(script_dir, 'settings.yaml')
 
-
 # Get the start time
 timestart = datetime.now()
 
 from more_python.is_color_printer import is_color_printer
 
-# Set the output directory to be the same location as the script, or the current working directory
-output_directory = os.path.join(script_dir, "printerCounterOUTPUT")
+# Set the output directory to be one level up and then to 'output'
+output_directory = os.path.normpath(os.path.join(script_dir, "../output"))
+logs_directory = os.path.join(output_directory, "logs")
+
+# Ensure the directories exist
+os.makedirs(output_directory, exist_ok=True)
+os.makedirs(logs_directory, exist_ok=True)
 
 # Load the YAML configuration
 with open(config_file, 'r') as file:
@@ -30,7 +34,8 @@ snmp_community = config.get('snmp_community', 'public')
 
 # Define the filename with the requested naming scheme
 filename = f"totals_{datetime.now():%Y_%m}.csv"
-logfile = os.path.join(output_directory, "todayslog.txt")
+csvfile = os.path.join(output_directory, filename)
+logfile = os.path.join(logs_directory, "TodaysLog_PrinterCounter.txt")
 
 # Ensure the output directory exists
 os.makedirs(output_directory, exist_ok=True)
@@ -38,6 +43,9 @@ os.makedirs(output_directory, exist_ok=True)
 # Clear the log file at the start of each run
 with open(logfile, "w"):
     pass
+
+# Your existing code for the script continues here
+
 
 def sanitize_output(input_str):
     truncated = input_str[:64]

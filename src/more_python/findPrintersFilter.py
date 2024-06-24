@@ -12,7 +12,8 @@ ignore_models = [
     "HP ETHERNET",
     "HP",
     "Xerox",
-    "Integrated"
+    "Integrated",
+    "PrintNet"
 ]
 
 # OIDs to test for printers
