@@ -9,3 +9,5 @@ notused
 allprinters/*
 !allprinters/allprinters/_snmpWalkBASH_ip.sh
 !allprinters/allprinters/_snmpWalkIP.py
+src/more_python/__pycache__
+*.pyc

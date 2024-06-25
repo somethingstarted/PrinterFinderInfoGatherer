@@ -20,7 +20,7 @@ HOSTNAME_OID = ".1.3.6.1.2.1.1.5.0"  # OID for the printer hostname
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
 # Assuming the YAML file is in the same directory as the script
-config_file = os.path.join(script_dir, 'settings.yaml')
+config_file = os.path.normpath(os.path.join(script_dir, '../settings.yaml'))
 
 # Output directories
 output_dir = os.path.normpath(os.path.join(script_dir, '../output'))

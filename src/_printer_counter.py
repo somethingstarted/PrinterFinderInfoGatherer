@@ -8,15 +8,15 @@ import yaml
 
 # Assuming the YAML file is in the same directory as the script
 script_dir = os.path.dirname(os.path.realpath(__file__))
-config_file = os.path.join(script_dir, 'settings.yaml')
+config_file = os.path.normpath(os.path.join(script_dir, '../settings.yaml'))
 
 # Get the start time
 timestart = datetime.now()
 
 from more_python.is_color_printer import is_color_printer
 
-# Set the output directory to be one level up and then to 'output'
-output_directory = os.path.normpath(os.path.join(script_dir, "../output"))
+output_name = "output"
+output_directory = os.path.normpath(os.path.join(script_dir, f"../{output_name}"))
 logs_directory = os.path.join(output_directory, "logs")
 
 # Ensure the directories exist
@@ -131,8 +131,8 @@ current_year = datetime.now().year
 current_month = datetime.now().month
 
 # Format the expected file name
-foundPrintersCSV = f"printers_{current_year:04d}-{current_month:02d}.csv"
-foundprinters_dir = os.path.join(os.path.dirname(__file__), "foundprinters")
+foundPrintersCSV = f"foundprinters_{current_year:04d}-{current_month:02d}.csv"
+foundprinters_dir = os.path.normpath(os.path.join(script_dir, f"../{output_name}"))
 echo = f"searching: {foundprinters_dir}"
 expected_file_path = os.path.join(foundprinters_dir, foundPrintersCSV)
 
