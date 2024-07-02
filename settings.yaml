@@ -1,12 +1,11 @@
 debug: false
 SuppressSnmpErrors: true
 debug_date: false
-snmpv1_community:
-  - public
+snmpv1_community: public
 debug_MM_YYYY: 9-2001
 DateFilenameOffset: -5 #if x days before the 1st, date it for next month
 subnets: #for findpriners.sh - subnets to search for priners in. will be used if debug is false.
-  - 10.25.5.0/24 # brenham - servers 
+  - 10.25.5.0/24 # brenham
   - 10.25.20.0/24 # Brenham - data vlan
   - 10.1.1.0/24
   - 10.1.2.0/24
@@ -15,9 +14,9 @@ subnets: #for findpriners.sh - subnets to search for priners in. will be used if
   - 10.17.50.0/24
   - 10.2.2.0/24
   - 10.2.3.0/24
+  - 10.20.1.1/24 # missippi
+  - 10.20.20.1/24 # missippi
 knownprinters: #for testing. wont be used if debug is off.  
-  - 10.25.5.2
-  - 10.25.20.84
   - 10.25.20.118 
   - 10.1.2.163
   - 10.25.5.51

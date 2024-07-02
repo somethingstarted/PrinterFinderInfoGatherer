@@ -2,10 +2,10 @@
 
 from pysnmp.hlapi import *
 
-def snmp_get(ip, oid):
+def snmp_get(snmpv1_community, ip, oid):
     errorIndication, errorStatus, errorIndex, varBinds = next(
         getCmd(SnmpEngine(),
-               CommunityData('public', mpModel=0),
+               CommunityData(snmpv1_community, mpModel=0),
                UdpTransportTarget((ip, 161)),
                ContextData(),
                ObjectType(ObjectIdentity(oid)))
@@ -16,7 +16,7 @@ def snmp_get(ip, oid):
         for varBind in varBinds:
             return str(varBind[1])
     return None
-def is_color_printer(ip, model):
+def is_color_printer(ip, model, snmpv1_community):
     # OIDs for checking toner status
     toner_oids = {
         'black': '1.3.6.1.2.1.43.11.1.1.9.1.1',
@@ -53,7 +53,7 @@ def is_color_printer(ip, model):
 
     # If the model is not recognized, fall back to checking toner OIDs
     for color in ['cyan', 'magenta', 'yellow']:
-        result = snmp_get(ip, toner_oids[color])
+        result = snmp_get(snmpv1_community, ip, toner_oids[color])
         if result is not None and result != 'noSuchInstance':
             return True  # It's a color printer if any color toner is present
 

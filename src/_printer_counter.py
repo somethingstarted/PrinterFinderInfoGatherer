@@ -9,6 +9,7 @@ import yaml
 # Assuming the YAML file is in the same directory as the script
 script_dir = os.path.dirname(os.path.realpath(__file__))
 config_file = os.path.normpath(os.path.join(script_dir, '../settings.yaml'))
+from more_python.time_formatter import format_elapsed_time  # Import the new module
 
 # Get the start time
 timestart = datetime.now()
@@ -30,7 +31,7 @@ with open(config_file, 'r') as file:
 # Load config from YAML
 debug = config.get('debug', False)
 known_printers = config.get('knownprinters', [])
-snmp_community = config.get('snmp_community', 'public')
+snmpv1_community = config['snmpv1_community']
 
 # Define the filename with the requested naming scheme
 filename = f"totals_{datetime.now():%Y_%m}.csv"
@@ -62,7 +63,7 @@ def snmp_get(ip, oid):
     errorIndication, errorStatus, errorIndex, varBinds = next(
         snmp.getCmd(snmp.SnmpEngine(),
 #                    snmp.CommunityData(snmp_community),
-                    snmp.CommunityData('public'),
+                    snmp.CommunityData(snmpv1_community),
                     snmp.UdpTransportTarget((ip, 161)),
                     snmp.ContextData(),
                     snmp.ObjectType(snmp.ObjectIdentity(oid)))
@@ -77,7 +78,7 @@ def snmp_get(ip, oid):
     return None
 
 def get_printer_counts(ip, model):
-    is_color = is_color_printer(ip, model)  # Ensure model is passed
+    is_color = is_color_printer(ip, model, snmpv1_community)  # Ensure model is passed
 
     bw_oids = get_matching_oids(OIDS_bw_known, OIDS_bw, model, default_oid)
     bw_count = try_snmp_get(ip, bw_oids)
@@ -265,5 +266,6 @@ print(f"Totals appended to or written to {filename}")
 
 # Get the end time
 timeend = datetime.now()
-elapsed_time = (timeend - timestart).total_seconds()
+elapsed_time = timeend - timestart
+formatted_elapsed_time = format_elapsed_time(elapsed_time, format_type=1)
 print(f"All done in {elapsed_time} seconds")

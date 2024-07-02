@@ -1,7 +1,6 @@
 printerCounterOUTPUT
 foundprinters
-src/foundprinters
-src/settings.yaml
+settings.yaml
 output
 allprinters
 notused
@@ -11,3 +10,4 @@ allprinters/*
 !allprinters/allprinters/_snmpWalkIP.py
 src/more_python/__pycache__
 *.pyc
+*.yaml

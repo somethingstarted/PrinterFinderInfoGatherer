@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from pysnmp.hlapi import *
 
 # Import is_printer function from the new script
-from more_python.findPrintersFilter import is_printer
+from more_python.find_printers_filter import is_printer
 
 # Define OIDs for different printer data
 SERIAL_OIDS = [
@@ -38,6 +38,7 @@ debug_mode = config['debug']
 subnets = config['subnets']
 known_printers = config['knownprinters']
 date_filename_offset = -config['DateFilenameOffset']
+snmpv1_community = config['snmpv1_community']
 
 # Determine the base date
 if config['debug_date']:
@@ -82,7 +83,7 @@ def get_printer_data(ip):
     for oid in SERIAL_OIDS:
         errorIndication, errorStatus, errorIndex, varBinds = next(
             getCmd(SnmpEngine(),
-                   CommunityData('public', mpModel=0),
+                   CommunityData(snmpv1_community, mpModel=0),
                    UdpTransportTarget((ip, 161)),
                    ContextData(),
                    ObjectType(ObjectIdentity(oid)))
@@ -102,7 +103,7 @@ def get_printer_data(ip):
 
     errorIndication, errorStatus, errorIndex, varBinds = next(
         getCmd(SnmpEngine(),
-               CommunityData('public', mpModel=0),
+               CommunityData(snmpv1_community, mpModel=0),
                UdpTransportTarget((ip, 161)),
                ContextData(),
                ObjectType(ObjectIdentity(MODEL_OID)))
@@ -114,7 +115,7 @@ def get_printer_data(ip):
 
     errorIndication, errorStatus, errorIndex, varBinds = next(
         getCmd(SnmpEngine(),
-               CommunityData('public', mpModel=0),
+               CommunityData(snmpv1_community, mpModel=0),
                UdpTransportTarget((ip, 161)),
                ContextData(),
                ObjectType(ObjectIdentity(HOSTNAME_OID)))

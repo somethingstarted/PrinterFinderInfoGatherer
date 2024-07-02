@@ -1,5 +1,7 @@
 from pysnmp.hlapi import *
 
+
+
 # List of printer models to ignore
 ignore_models = [
     "Canon MF450 Series",
@@ -23,14 +25,15 @@ printer_test_oids = [
 
 # False means not a printer, or ignore printer
 # True means is a printer
-def is_printer(ip):
+def is_printer(ip, snmpv1_community):
     model = None
+    snmpv1_community = snmpv1_community
     
     # Check the OIDs to detect the model
     for oid in printer_test_oids:
         errorIndication, errorStatus, errorIndex, varBinds = next(
             getCmd(SnmpEngine(),
-                   CommunityData('public', mpModel=0),
+                   CommunityData(snmpv1_community, mpModel=0),
                    UdpTransportTarget((ip, 161)),
                    ContextData(),
                    ObjectType(ObjectIdentity(oid)))
@@ -56,7 +59,7 @@ def is_printer(ip):
     for oid in printer_test_oids:
         errorIndication, errorStatus, errorIndex, varBinds = next(
             getCmd(SnmpEngine(),
-                   CommunityData('public', mpModel=0),
+                   CommunityData(snmpv1_community, mpModel=0),
                    UdpTransportTarget((ip, 161)),
                    ContextData(),
                    ObjectType(ObjectIdentity(oid)))
