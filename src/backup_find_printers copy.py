@@ -3,7 +3,6 @@ import subprocess
 import yaml
 from datetime import datetime, timedelta
 from pysnmp.hlapi import *
-import time
 
 # Import is_printer function from the new script
 from more_python.find_printers_filter import is_printer
@@ -43,7 +42,7 @@ def get_config_value(key, default=None, required=False):
         print(f"Need {key} from settings.yaml")
         exit(1)
     else:
-        #print(f"{key} variable not found in settings.yaml, defaulting to {default}")
+        print(f"{key} variable not found in settings.yaml, defaulting to {default}")
         return default
 
 # Load configuration values
@@ -64,17 +63,13 @@ else:
 # Calculate the adjusted date based on offset
 adjusted_date = base_date + timedelta(days=date_filename_offset)
 adjusted_month_year = adjusted_date.strftime("%Y-%m")
-stylizedSleep = 0.1
 
 # Get current month and year for file naming
 short_name = f"foundprinters_{adjusted_month_year}.csv"
 output_file = os.path.join(output_dir, short_name)
 print(">>>>>")
-time.sleep(stylizedSleep)
 print(f">>>>>        FILE NAME: {short_name}")
-time.sleep(stylizedSleep)
 print(">>>>>")
-time.sleep(stylizedSleep)
 
 # Get current month name for log file naming
 log_file = os.path.join(logs_dir, f"log_{adjusted_month_year}.txt")
@@ -159,16 +154,16 @@ def is_printer_in_csv(ip):
 
 # Function to scan an IP address and update the CSV content
 def scan_ip(current_ip):
+
     print(f"{current_ip} - polling...", end="\n")
-    
-    # Skip if IP is x.x.x.1 or x.x.x.255
+        # Skip if IP is x.x.x.1 or x.x.x.255
     if current_ip.endswith('.1') or current_ip.endswith('.255'):
         print('\033[A\033[K', end='')
         print(f"{current_ip} - skipped", end="\n")
         return
-    
     response = subprocess.run(['ping', '-c', '1', '-W', '1', current_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if response.returncode != 0:
+        
         print('\033[A\033[K', end='')
         print(f"{current_ip} - ?")
         with open(todays_log, 'a') as tlog:
@@ -178,19 +173,17 @@ def scan_ip(current_ip):
     serial, model, hostname = get_printer_data(current_ip)
     print('\033[A\033[K', end='')
 
-    is_printer_flag, returnString = is_printer(current_ip, snmpv1_community)
-    if is_printer_flag:
-        print(f"{current_ip} {returnString}\n")
+    if is_printer(current_ip, snmpv1_community):
+        print(f"{current_ip} is printer.\n")
         with open(todays_log, 'a') as tlog:
             if not serial:
                 tlog.write(f"{current_ip} - no serial - ?\n")
             else:
                 tlog.write(f"{current_ip} - {model} - {serial} - {hostname}\n")
     else:
-        print('\033[A\033[K', end='')
-        print(f"{current_ip} {returnString}: {model} - {hostname}")
+        print(f"{current_ip}: not a printer:: {model} - {hostname}")
         with open(todays_log, 'a') as tlog:
-            tlog.write(f"{current_ip} {returnString}: {model} - {serial} - {hostname}\n")
+            tlog.write(f"{current_ip} - not a printer: {model} - {serial} - {hostname}\n")
 
 # Initialize CSV file with headers if it doesn't exist
 if not os.path.isfile(output_file):
@@ -205,39 +198,24 @@ def generate_ips_in_subnet(subnet):
         yield str(ip)
 
 # Main logic to decide which IPs to scan
-try:
-    if debug_mode:
-        for current_ip in known_printers:
+if debug_mode:
+    for current_ip in known_printers:
+        scan_ip(current_ip)
+    with open(todays_log, 'a') as tlog:
+        tlog.write(f"Results saved to {output_dir}\n")
+else:
+    for subnet in subnets:
+        with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
+            log.write(f"{datetime.now().strftime('%H:%M:%S')} starting subnet {subnet}\n")
+            tlog.write(f"{datetime.now().strftime('%H:%M:%S')} starting subnet {subnet}\n")
+
+        for current_ip in generate_ips_in_subnet(subnet):
             scan_ip(current_ip)
-        with open(todays_log, 'a') as tlog:
-            tlog.write(f"Results saved to {output_dir}\n")
-    else:
-        for subnet in subnets:
-            with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
-                log.write(f"{datetime.now().strftime('%H:%M:%S')} starting subnet {subnet}\n")
-                tlog.write(f"{datetime.now().strftime('%H:%M:%S')} starting subnet {subnet}\n")
 
-            for current_ip in generate_ips_in_subnet(subnet):
-                scan_ip(current_ip)
-
-            with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
-                log.write(f"{datetime.now().strftime('%H:%M:%S')} finished subnet {subnet}\n")
-                tlog.write(f"{datetime.now().strftime('%H:%M:%S')} finished subnet {subnet}\n")
-                tlog.write(f"Results saved to {output_dir} for subnet {subnet}\n")
-
-    # Log the end of the script
-    with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
-        end_time = datetime.now().strftime("%I:%M %p - %d %b")
-        log.write(f"{end_time} - entire script finished\n")
-        tlog.write(f"{end_time} - entire script finished\n")
-
-    print(f"All subnets scanned. Results saved to {output_dir}")
-
-except KeyboardInterrupt:
-    print("\r")
-    print('\033[A\033[K', end='')
-    print("Process interrupted by user.")
-
+        with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
+            log.write(f"{datetime.now().strftime('%H:%M:%S')} finished subnet {subnet}\n")
+            tlog.write(f"{datetime.now().strftime('%H:%M:%S')} finished subnet {subnet}\n")
+            tlog.write(f"Results saved to {output_dir} for subnet {subnet}\n")
 
 # Log the end of the script
 with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
