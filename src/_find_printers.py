@@ -69,11 +69,11 @@ stylizedSleep = 0.1
 # Get current month and year for file naming
 short_name = f"foundprinters_{adjusted_month_year}.csv"
 output_file = os.path.join(output_dir, short_name)
-print(">>>>>")
+print(">>>>>\t\t\t\t\t<<<<")
 time.sleep(stylizedSleep)
-print(f">>>>>        FILE NAME: {short_name}")
+print(f">>>>>\t{short_name}\t<<<<")
 time.sleep(stylizedSleep)
-print(">>>>>")
+print(">>>>>\t\t\t\t\t<<<<")
 time.sleep(stylizedSleep)
 
 # Get current month name for log file naming
@@ -159,28 +159,28 @@ def is_printer_in_csv(ip):
 
 # Function to scan an IP address and update the CSV content
 def scan_ip(current_ip):
-    print(f"{current_ip} - polling...", end="\n")
+    print(f"{current_ip}   -   polling...", end="\n")
     
     # Skip if IP is x.x.x.1 or x.x.x.255
     if current_ip.endswith('.1') or current_ip.endswith('.255'):
         print('\033[A\033[K', end='')
-        print(f"{current_ip} - skipped", end="\n")
+        print(f"{current_ip} \tskipped", end="\n")
         return
     
     response = subprocess.run(['ping', '-c', '1', '-W', '1', current_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if response.returncode != 0:
         print('\033[A\033[K', end='')
-        print(f"{current_ip} - ?")
+        print(f"{current_ip} \t?")
         with open(todays_log, 'a') as tlog:
             tlog.write(f"{current_ip} - ?\n")
         return
 
     serial, model, hostname = get_printer_data(current_ip)
-    print('\033[A\033[K', end='')
+    #print('\033[A\033[K', end='')
 
     is_printer_flag, returnString = is_printer(current_ip, snmpv1_community)
     if is_printer_flag:
-        print(f"{current_ip} {returnString}\n")
+        print(f"{current_ip} \t{returnString}")
         with open(todays_log, 'a') as tlog:
             if not serial:
                 tlog.write(f"{current_ip} - no serial - ?\n")
@@ -188,9 +188,9 @@ def scan_ip(current_ip):
                 tlog.write(f"{current_ip} - {model} - {serial} - {hostname}\n")
     else:
         print('\033[A\033[K', end='')
-        print(f"{current_ip} {returnString}: {model} - {hostname}")
+        print(f"{current_ip} \t{returnString}: {model} - {hostname}")
         with open(todays_log, 'a') as tlog:
-            tlog.write(f"{current_ip} {returnString}: {model} - {serial} - {hostname}\n")
+            tlog.write(f"{current_ip} \t{returnString}: {model} - {serial} - {hostname}\n")
 
 # Initialize CSV file with headers if it doesn't exist
 if not os.path.isfile(output_file):
@@ -245,4 +245,3 @@ with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
     log.write(f"{end_time} - entire script finished\n")
     tlog.write(f"{end_time} - entire script finished\n")
 
-print(f"All subnets scanned. Results saved to {output_dir}")
