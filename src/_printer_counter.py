@@ -157,6 +157,8 @@ else:
     else:
         print(f"ln120: can't open ({foundPrintersCSV}) in {foundprinters_dir}")
         exit(1)
+
+
 # known OIDs fr bw and color
 OIDS_bw_known = {
     "KONICA MINOLTA bizhub C368": ["1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2"],

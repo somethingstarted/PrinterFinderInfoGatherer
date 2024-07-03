@@ -17,21 +17,22 @@ SERIAL_OIDS = [
 MODEL_OID = ".1.3.6.1.2.1.1.1.0"  # OID for the printer model
 HOSTNAME_OID = ".1.3.6.1.2.1.1.5.0"  # OID for the printer hostname
 
+#count number of IP addresses to do
+ipAddressesTotal = 0
+ipAddressesRemaining = 0
+ipAddressesDone = 0
+
+
 # Get the directory of the script
 script_dir = os.path.dirname(os.path.realpath(__file__))
-
-# Assuming the YAML file is in the same directory as the script
 config_file = os.path.normpath(os.path.join(script_dir, '../settings.yaml'))
 
 # Output directories
 output_dir = os.path.normpath(os.path.join(script_dir, '../output'))
 logs_dir = os.path.join(output_dir, 'logs')
-
-# Ensure the directories exist
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(logs_dir, exist_ok=True)
 
-# Load configuration from the YAML file
 with open(config_file, 'r') as file:
     config = yaml.safe_load(file)
 
@@ -179,13 +180,20 @@ def scan_ip(current_ip):
     #print('\033[A\033[K', end='')
 
     is_printer_flag, returnString = is_printer(current_ip, snmpv1_community)
+    #print(f"\t{current_ip} ----->> {is_printer_flag}, {returnString}")
     if is_printer_flag:
-        print(f"{current_ip} \t{returnString}")
         with open(todays_log, 'a') as tlog:
             if not serial:
                 tlog.write(f"{current_ip} - no serial - ?\n")
             else:
                 tlog.write(f"{current_ip} - {model} - {serial} - {hostname}\n")
+                
+                #  write to csv:
+        if serial and not is_printer_in_csv(current_ip):
+            print('\033[A\033[K', end='')
+            print(f"{current_ip} \t{returnString}: {model} - {hostname}")
+            with open(output_file, 'a') as file:
+                file.write(f"{current_ip},{model},{serial},{hostname}\n")
     else:
         print('\033[A\033[K', end='')
         print(f"{current_ip} \t{returnString}: {model} - {hostname}")

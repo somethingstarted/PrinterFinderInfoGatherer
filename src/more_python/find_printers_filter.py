@@ -15,7 +15,9 @@ ignore_models = [
     "HP",
     "Xerox",
     "Integrated",
-    "PrintNet"
+    "PrintNet",
+    "SOLID F40",
+    "Integrated PrintNet"
 ]
 
 # OIDs to test for printers
@@ -64,7 +66,7 @@ def is_printer(ip, snmpv1_community):
         if not errorIndication and not errorStatus:
             for varBind in varBinds:
                 if str(varBind[1]):
-                    returnString = "not a printer"
+                    returnString = "is printer"
                     return (True, returnString)  # OID check passed, it is a printer
 
     returnString = "not a printer"
