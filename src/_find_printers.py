@@ -184,9 +184,9 @@ def scan_ip(current_ip):
     if is_printer_flag:
         with open(todays_log, 'a') as tlog:
             if not serial:
-                tlog.write(f"{current_ip} - no serial - ?\n")
+                tlog.write(f"{current_ip}: {returnString}- no serial - ?\n")
             else:
-                tlog.write(f"{current_ip} - {model} - {serial} - {hostname}\n")
+                tlog.write(f"{current_ip}: {returnString}- {model} - {serial} - {hostname}\n")
                 
                 #  write to csv:
         if serial and not is_printer_in_csv(current_ip):
