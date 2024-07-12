@@ -1,5 +1,6 @@
 #     rename this to "settings.yaml" and fill in the values
 debug: false
+dayToRunBoth: 8 #day of each month to run both printer finder and printer page counter.
 snmpv1_community: public
 SuppressSnmpErrors: true  #only set to false if you want to see the errors. will ruin the csv output.
 snmpv1_community: public
@@ -13,3 +14,12 @@ knownprinters: #if debug is false this is ignored
   - 10.1.1.3
   - 10.1.2.3
   - 192.168.1.1 
+  bashCommands: #custom commands at beginning and ending of each script
+    - StartBashCounter: | #multiline command
+      echo "Starting BashCounter"
+      echo "Counter is running"
+  - EndBashCounter: 'echo "--"' #single line command
+  - StartBashFinder: ''
+  - EndBashFinder: ''
+  - StartBashScheduler: ''
+  - EndBashScheduler: ''

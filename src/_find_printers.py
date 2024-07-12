@@ -5,6 +5,10 @@ from datetime import datetime, timedelta
 from pysnmp.hlapi import *
 import time
 
+
+from more_python.time_formatter import format_elapsed_time  
+timestart = datetime.now()
+
 # Import is_printer function from the new script
 from more_python.find_printers_filter import is_printer
 
@@ -66,10 +70,15 @@ else:
 adjusted_date = base_date + timedelta(days=date_filename_offset)
 adjusted_month_year = adjusted_date.strftime("%Y-%m")
 stylizedSleep = 0.1
+year = adjusted_date.strftime("%Y")
+
+# Create a subdirectory for the year
+year_output_dir = os.path.join(output_dir, year)
+os.makedirs(year_output_dir, exist_ok=True)
 
 # Get current month and year for file naming
 short_name = f"foundprinters_{adjusted_month_year}.csv"
-output_file = os.path.join(output_dir, short_name)
+output_file = os.path.join(year_output_dir, short_name)
 print(">>>>>\t\t\t\t\t<<<<")
 time.sleep(stylizedSleep)
 print(f">>>>>\t{short_name}\t<<<<")
@@ -78,10 +87,11 @@ print(">>>>>\t\t\t\t\t<<<<")
 time.sleep(stylizedSleep)
 
 # Get current month name for log file naming
-log_file = os.path.join(logs_dir, f"log_{adjusted_month_year}.txt")
+log_file = os.path.join(year_output_dir, f"log_{adjusted_month_year}.txt")
 
 # Today's log file
-todays_log = os.path.join(logs_dir, "TodaysLog_FindPrinters.txt")
+todays_log = os.path.join(year_output_dir, "TodaysLog_FindPrinters.txt")
+
 
 # Clear today's log file
 with open(todays_log, 'w'):
@@ -218,7 +228,7 @@ try:
         for current_ip in known_printers:
             scan_ip(current_ip)
         with open(todays_log, 'a') as tlog:
-            tlog.write(f"Results saved to {output_dir}\n")
+            tlog.write(f"Results saved to {year_output_dir}\n")
     else:
         for subnet in subnets:
             with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
@@ -231,7 +241,7 @@ try:
             with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
                 log.write(f"{datetime.now().strftime('%H:%M:%S')} finished subnet {subnet}\n")
                 tlog.write(f"{datetime.now().strftime('%H:%M:%S')} finished subnet {subnet}\n")
-                tlog.write(f"Results saved to {output_dir} for subnet {subnet}\n")
+                tlog.write(f"Results saved to {year_output_dir} for subnet {subnet}\n")
 
     # Log the end of the script
     with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
@@ -239,17 +249,22 @@ try:
         log.write(f"{end_time} - entire script finished\n")
         tlog.write(f"{end_time} - entire script finished\n")
 
-    print(f"All subnets scanned. Results saved to {output_dir}")
+    print(f"All subnets scanned. Results saved to {year_output_dir}")
 
 except KeyboardInterrupt:
     print("\r")
     print('\033[A\033[K', end='')
     print("Process interrupted by user.")
 
+# Get the end time
+timeend = datetime.now()
+elapsed_time = timeend - timestart
+formatted_elapsed_time = format_elapsed_time(elapsed_time, format_type=1)
+print(f"elapsed time: {elapsed_time}")
 
 # Log the end of the script
 with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
     end_time = datetime.now().strftime("%I:%M %p - %d %b")
-    log.write(f"{end_time} - entire script finished\n")
-    tlog.write(f"{end_time} - entire script finished\n")
+    log.write(f"{end_time} - entire script finished in: {elapsed_time}\n")
+    tlog.write(f"{end_time} - entire script finished in: {elapsed_time}\n")
 

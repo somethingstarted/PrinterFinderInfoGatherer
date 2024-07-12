@@ -1,7 +1,7 @@
 import os
 import csv
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 import pysnmp.hlapi as snmp
 import re
 import yaml
@@ -9,21 +9,18 @@ import yaml
 # Assuming the YAML file is in the same directory as the script
 script_dir = os.path.dirname(os.path.realpath(__file__))
 config_file = os.path.normpath(os.path.join(script_dir, '../settings.yaml'))
-from more_python.time_formatter import format_elapsed_time  # Import the new module
+from more_python.time_formatter import format_elapsed_time  
 
 # Get the start time
 timestart = datetime.now()
+print(f"Started at {timestart}")
 
 from more_python.is_color_printer import is_color_printer
 
 output_name = "output"
 output_directory = os.path.normpath(os.path.join(script_dir, f"../{output_name}"))
-logs_directory = os.path.join(output_directory, "logs")
 
-# Ensure the directories exist
-os.makedirs(output_directory, exist_ok=True)
-os.makedirs(logs_directory, exist_ok=True)
-
+################ settings.yaml ################
 # Load the YAML configuration
 with open(config_file, 'r') as file:
     config = yaml.safe_load(file)
@@ -32,21 +29,44 @@ with open(config_file, 'r') as file:
 debug = config.get('debug', False)
 known_printers = config.get('knownprinters', [])
 snmpv1_community = config['snmpv1_community']
+bash_commands  = config['bashCommands']
+###############################################
+
+# Function to execute a given bash command
+def execute_command(command_name):
+    command = bash_commands.get(command_name)
+    if command:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        print(f"Output for {command_name}:\n{result.stdout}")
+        print(f"Error for {command_name}:\n{result.stderr}")
+    else:
+        print(f"Command {command_name} not found in the configuration.")
+
+execute_command('StartBashCounter')
+
+# Get the base date
+base_date = datetime.now()
+if config.get('debug_date', False):
+    base_date = datetime.strptime(f"01-{config.get('debug_MM_YYYY', required=False)}", "%d-%m-%Y")
+
+# Calculate the adjusted date based on offset
+date_filename_offset = -config.get('DateFilenameOffset', 0)
+adjusted_date = base_date + timedelta(days=date_filename_offset)
+adjusted_year = adjusted_date.strftime("%Y")
+
+# Create a subdirectory for the year
+year_output_dir = os.path.join(output_directory, adjusted_year)
+os.makedirs(year_output_dir, exist_ok=True)
+
 
 # Define the filename with the requested naming scheme
-filename = f"totals_{datetime.now():%Y_%m}.csv"
-csvfile = os.path.join(output_directory, filename)
-logfile = os.path.join(logs_directory, "TodaysLog_PrinterCounter.txt")
-
-# Ensure the output directory exists
-os.makedirs(output_directory, exist_ok=True)
+filename = f"totals_{adjusted_date:%Y_%m}.csv"
+csvfile_path = os.path.join(year_output_dir, filename)
+logfile = os.path.join(year_output_dir, "TodaysLog_PrinterCounter.txt")
 
 # Clear the log file at the start of each run
 with open(logfile, "w"):
     pass
-
-# Your existing code for the script continues here
-
 
 def sanitize_output(input_str):
     truncated = input_str[:64]
@@ -92,7 +112,6 @@ def get_printer_counts(ip, model):
 
     return bw_count if bw_count is not None else "", color_count if color_count is not None else ""
 
-
 def get_matching_oids(known_oid_dict, oid_dict, model, default):
     # Normalize the model string by converting to lowercase and removing spaces
     normalized_model = model.lower().replace(" ", "")
@@ -132,10 +151,10 @@ current_year = datetime.now().year
 current_month = datetime.now().month
 
 # Format the expected file name
-foundPrintersCSV = f"foundprinters_{current_year:04d}-{current_month:02d}.csv"
+foundPrintersCSV = f"foundprinters_{adjusted_date:%Y-%m}.csv"
 foundprinters_dir = os.path.normpath(os.path.join(script_dir, f"../{output_name}"))
 echo = f"searching: {foundprinters_dir}"
-expected_file_path = os.path.join(foundprinters_dir, foundPrintersCSV)
+expected_file_path = os.path.join(year_output_dir, foundPrintersCSV)
 
 # Initialize printer_ips
 printer_ips = []
@@ -146,7 +165,7 @@ if debug:
     # Example of what printer_ips might be in debug mode, replace with actual debug data if available
     printer_ips = known_printers
 else:
-    print(echo)
+    print(f"searching: {expected_file_path}")
     if os.path.exists(expected_file_path):
         print(f"Using printers list from {expected_file_path}")
         # Read the printer IPs from the CSV file (first column, starting from the second row)
@@ -155,7 +174,7 @@ else:
             reader = csv.reader(csvfile)
             printer_ips = [row[0] for row in list(reader)[1:]]
     else:
-        print(f"ln120: can't open ({foundPrintersCSV}) in {foundprinters_dir}")
+        print(f"ln120: can't open ({foundPrintersCSV}) in {expected_file_path}")
         exit(1)
 
 
@@ -246,18 +265,16 @@ for ip in printer_ips:
     # Append counts to counts row
     counts_row += f",{count_bw},{count_color}"
 
-
 # Check if the file already exists
-output_file = os.path.join(output_directory, filename)
-if os.path.exists(output_file):
+if os.path.exists(csvfile_path):
     print("Appending totals to CSV...")
-    with open(output_file, 'a', newline='') as csvfile:
-        writer = csv.writer(csvfile)
+    with open(csvfile_path, 'a', newline='') as file:
+        writer = csv.writer(file)
         writer.writerow(counts_row.split(','))
 else:
     print("Creating new CSV...")
-    with open(output_file, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
+    with open(csvfile_path, 'w', newline='') as file:
+        writer = csv.writer(file)
         writer.writerow([f"{datetime.now():%b %Y}"] + header.split(','))
         writer.writerow([''] + model_row.split(','))
         writer.writerow([''] + serials_row.split(','))
@@ -271,3 +288,4 @@ timeend = datetime.now()
 elapsed_time = timeend - timestart
 formatted_elapsed_time = format_elapsed_time(elapsed_time, format_type=1)
 print(f"All done in {elapsed_time} seconds")
+execute_command('EndBashCounter')
