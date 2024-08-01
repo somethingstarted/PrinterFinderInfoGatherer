@@ -29,30 +29,16 @@ with open(config_file, 'r') as file:
 debug = config.get('debug', False)
 known_printers = config.get('knownprinters', [])
 snmpv1_community = config['snmpv1_community']
-bash_commands  = config['bashCommands']
 ###############################################
 
-# Function to execute a given bash command
-def execute_command(command_name):
-    command = bash_commands.get(command_name)
-    if command:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        print(f"Output for {command_name}:\n{result.stdout}")
-        print(f"Error for {command_name}:\n{result.stderr}")
-    else:
-        print(f"Command {command_name} not found in the configuration.")
-
-execute_command('StartBashCounter')
 
 # Get the base date
 base_date = datetime.now()
 if config.get('debug_date', False):
     base_date = datetime.strptime(f"01-{config.get('debug_MM_YYYY', required=False)}", "%d-%m-%Y")
 
-# Calculate the adjusted date based on offset
-date_filename_offset = -config.get('DateFilenameOffset', 0)
-adjusted_date = base_date + timedelta(days=date_filename_offset)
-adjusted_year = adjusted_date.strftime("%Y")
+# Calculate the adjusted date based on offset 
+adjusted_year = base_date.strftime("%Y")
 
 # Create a subdirectory for the year
 year_output_dir = os.path.join(output_directory, adjusted_year)
@@ -60,7 +46,7 @@ os.makedirs(year_output_dir, exist_ok=True)
 
 
 # Define the filename with the requested naming scheme
-filename = f"totals_{adjusted_date:%Y_%m}.csv"
+filename = f"totals_{base_date:%Y_%m}.csv"
 csvfile_path = os.path.join(year_output_dir, filename)
 logfile = os.path.join(year_output_dir, "TodaysLog_PrinterCounter.txt")
 
@@ -151,7 +137,7 @@ current_year = datetime.now().year
 current_month = datetime.now().month
 
 # Format the expected file name
-foundPrintersCSV = f"foundprinters_{adjusted_date:%Y-%m}.csv"
+foundPrintersCSV = f"foundprinters_{base_date:%Y-%m}.csv"
 foundprinters_dir = os.path.normpath(os.path.join(script_dir, f"../{output_name}"))
 echo = f"searching: {foundprinters_dir}"
 expected_file_path = os.path.join(year_output_dir, foundPrintersCSV)
@@ -288,4 +274,3 @@ timeend = datetime.now()
 elapsed_time = timeend - timestart
 formatted_elapsed_time = format_elapsed_time(elapsed_time, format_type=1)
 print(f"All done in {elapsed_time} seconds")
-execute_command('EndBashCounter')
