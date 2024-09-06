@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pysnmp.hlapi as snmp
 import re
 import yaml
+import socket
 
 # Assuming the YAML file is in the same directory as the script
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -45,14 +46,25 @@ year_output_dir = os.path.join(output_directory, adjusted_year)
 os.makedirs(year_output_dir, exist_ok=True)
 
 
-# Define the filename with the requested naming scheme
+# Define filenames
 filename = f"totals_{base_date:%Y_%m}.csv"
 csvfile_path = os.path.join(year_output_dir, filename)
-logfile = os.path.join(year_output_dir, "TodaysLog_PrinterCounter.txt")
+todaysLog = os.path.join(year_output_dir, "TodaysLog_PrinterCounter.txt")
 
 # Clear the log file at the start of each run
-with open(logfile, "w"):
+with open(todaysLog, "w"):
     pass
+
+# Define a reusable logging function
+def logMessage(logfile, message):
+    with open(logfile, 'a') as log:
+        log.write(message + "\n")
+
+# Log the start of the script
+
+start_time = datetime.now().strftime("%I:%M %p - %d %B %Y")
+logMessage(todaysLog, f"***** {start_time} - starting script\n")
+logMessage(todaysLog, socket.gethostname())
 
 def sanitize_output(input_str):
     truncated = input_str[:64]
@@ -88,13 +100,15 @@ def get_printer_counts(ip, model):
 
     bw_oids = get_matching_oids(OIDS_bw_known, OIDS_bw, model, default_oid)
     bw_count = try_snmp_get(ip, bw_oids)
-    print(f" {ip}    bw_count: {bw_count}")
+    print(f"        bw:    {bw_count}")
+    
+    #logMessage(todaysLog, f"        bw:     {count_bw}")
 
     color_count = ""
     if is_color:
         color_oids = get_matching_oids(OIDS_color_known, OIDS_color, model, default_oid)
         color_count = try_snmp_get(ip, color_oids)
-        print(f" {ip} color_count: {color_count}")
+        print(f"        color: {color_count}")
 
     return bw_count if bw_count is not None else "", color_count if color_count is not None else ""
 
@@ -113,11 +127,8 @@ def get_matching_oids(known_oid_dict, oid_dict, model, default):
     for keys in oid_dict:
         # Split keys by comma and iterate over each possible match
         for key in keys.split(','):
-            # Normalize the key string by converting to lowercase and removing spaces
             normalized_key = key.strip().lower().replace(" ", "")
-            
             if normalized_key in normalized_model:
-                # Return the list of OIDs, excluding any "null" entries
                 return [oid for oid in oid_dict[keys] if oid != "null"]
     
     # If no match is found, return the default OID
@@ -132,7 +143,7 @@ def try_snmp_get(ip, oids):
             return response
     return None
 
-# Get the current year and month
+
 current_year = datetime.now().year
 current_month = datetime.now().month
 
@@ -142,7 +153,6 @@ foundprinters_dir = os.path.normpath(os.path.join(script_dir, f"../{output_name}
 echo = f"searching: {foundprinters_dir}"
 expected_file_path = os.path.join(year_output_dir, foundPrintersCSV)
 
-# Initialize printer_ips
 printer_ips = []
 
 # Check if the expected file exists
@@ -164,7 +174,7 @@ else:
         exit(1)
 
 
-# known OIDs fr bw and color
+# known OIDs fr bw and color. move to module someday.
 OIDS_bw_known = {
     "KONICA MINOLTA bizhub C368": ["1.3.6.1.4.1.18334.1.1.1.5.7.2.2.1.5.1.2"],
     "ECOSYS M3860idn": ["iso.3.6.1.4.1.1347.42.3.1.1.1.1.1"],
@@ -225,7 +235,12 @@ for ip in printer_ips:
     # Ping the IP address
     response = subprocess.run(['ping', '-c', '1', '-W', '1', ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if response.returncode != 0:
-        print(f"pinging {ip} - No response...")
+        
+        
+        response = f"pinging {{ip}} - No response..."
+        print(response)
+        logMessage(todaysLog, response)
+        
         serials_row += ","
         counts_row += ",,"
         model_row += ","
@@ -235,11 +250,13 @@ for ip in printer_ips:
 
     # Get printer model
     model = get_printer_model(ip)
-    print(f">>>>>>>: {ip}: {model}")
+    response2 = f"        model: {model}"
+    print(response2)
+    logMessage(todaysLog, response2)
     model_row += f",{model},"
 
     # Query serial number
-    print(f"  {ip} Serial: ", end='')
+    print(f"        Serial: ", end='')
     serial = try_snmp_get(ip, oid_serial)
     serial = sanitize_output(serial) if serial is not None else ""
     print(serial)
@@ -247,9 +264,13 @@ for ip in printer_ips:
 
     # Get printer counts
     count_bw, count_color = get_printer_counts(ip, model)
+    logMessage(todaysLog, f"        bw:     {count_bw}")
+    logMessage(todaysLog, f"        Col:    {count_color}")
+    logMessage(todaysLog, f"        serial: {serial}")
 
     # Append counts to counts row
     counts_row += f",{count_bw},{count_color}"
+
 
 # Check if the file already exists
 if os.path.exists(csvfile_path):
@@ -267,10 +288,15 @@ else:
         writer.writerow(type_row.split(','))
         writer.writerow(counts_row.split(','))
 
-print(f"Totals appended to or written to {filename}")
+print(f"Totals written to: {filename}")
+logMessage(todaysLog, f"Totals written to: {filename}")
 
 # Get the end time
 timeend = datetime.now()
+#time began
+logMessage(todaysLog, f"        started:    {timestart}")
+logMessage(todaysLog, f"        finished:   {timeend}")
 elapsed_time = timeend - timestart
 formatted_elapsed_time = format_elapsed_time(elapsed_time, format_type=1)
-print(f"All done in {elapsed_time} seconds")
+print(f"All done in {elapsed_time}")
+logMessage(todaysLog, f"         total time: {elapsed_time}")

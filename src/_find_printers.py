@@ -4,6 +4,7 @@ import yaml
 from datetime import datetime, timedelta
 from pysnmp.hlapi import *
 import time
+import socket
 
 
 
@@ -104,6 +105,8 @@ with open(todays_log, 'w'):
 with open(log_file, 'a') as log, open(todays_log, 'a') as tlog:
     start_time = datetime.now().strftime("%I:%M %p - %d %B %Y")
     log.write(f"***** {start_time} - starting script\n")
+    log.write(socket.gethostname())
+    tlog.write(socket.gethostname())
     tlog.write(f"***** {start_time} - starting script\n")
 
 # Function to get data from the printer using SNMP
