@@ -1,8 +1,33 @@
 services:
-  web:
-    build: .
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  python:
+    image: python:3.10-alpine
+    volumes:
+      - ./data/python:/app
+    working_dir: /app
+    command: ["python", "main.py"]
+
+  apache:
+    image: httpd:latest
     ports:
       - "8080:80"
     volumes:
-      - ./data/html:/usr/share/nginx/html
-      - ../foundprinters:/usr/share/nginx/html/foundprinters
+      - ./data/apache:/usr/local/apache2/htdocs/
+      - ./src-web-interface:/usr/local/apache2/htdocs/web
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
