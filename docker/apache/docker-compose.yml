@@ -1,0 +1,10 @@
+version: "3"
+services:
+  apache:
+    image: httpd:latest
+    container_name: my-apache-server
+    ports:
+      - "80:80"
+    volumes:
+      - ./data/web:/usr/local/apache2/htdocs/
+      - ./data/apache-config/httpd.conf:/usr/local/apache2/conf/httpd.conf
