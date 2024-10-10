@@ -2,7 +2,7 @@ services:
   web:
     build: .
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
-      - ./html:/usr/share/nginx/html
+      - ./data/html:/usr/share/nginx/html
       - ../foundprinters:/usr/share/nginx/html/foundprinters
