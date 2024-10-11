@@ -8,3 +8,5 @@ notused/
 !allprinters/allprinters/_snmpWalkIP.py
 src/more_python/__pycache__/
 test.py
+docker/data/ 
+testing

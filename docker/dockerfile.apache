@@ -1,0 +1,8 @@
+# Use Apache official image
+FROM httpd:latest
+
+# Copy web content to the default directory served by Apache
+COPY ./src-web-interface/ /usr/local/apache2/htdocs/
+
+FROM nginx:latest
+COPY ../src-web-interface/nginx.conf /etc/nginx/nginx.conf

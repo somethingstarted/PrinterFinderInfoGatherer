@@ -1,0 +1,28 @@
+# Use Python official Alpine-based image for a lightweight setup
+FROM ubuntu:latest
+
+# Install necessary packages, e.g., Python, cron, etc.
+RUN apt-get update && apt-get install -y python3 python3-pip cron
+
+# Set working directory
+WORKDIR /app
+
+# Copy the application code to the container
+COPY . /app
+
+# Copy the shell script to update cron
+COPY update_cron.sh /app/update_cron.sh
+RUN chmod +x /app/update_cron.sh
+
+# Install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt || echo "No requirements.txt"
+
+# Create the cron file if it does not exist
+RUN touch /etc/cron.d/my_crontab
+
+# Run the shell script to update cron
+RUN /app/update_cron.sh
+
+# Start cron and the Python application
+CMD ["/bin/sh", "-c", "cron && python main.py"]
